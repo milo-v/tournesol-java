@@ -22,13 +22,13 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 public class ChampCommandHandler extends ListenerAdapter {
-    private Champion champion = new Champion();
-    private Ability passive = new Ability();
-    private Ability q = new Ability();
-    private Ability w = new Ability();
-    private Ability e = new Ability();
-    private Ability ult = new Ability();
-    private EmbedBuilder embed = new EmbedBuilder();
+    private Champion champion;
+    private Ability passive;
+    private Ability q;
+    private Ability w;
+    private Ability e;
+    private Ability ult;
+    private EmbedBuilder embed;
     private ActionRow profileRow = ActionRow.of(
             Button.primary("prev", "<").asDisabled(),
             Button.primary("profile", "Profile").asDisabled(),
@@ -59,7 +59,7 @@ public class ChampCommandHandler extends ListenerAdapter {
             Button.primary("r", "Ultimate").asDisabled(),
             Button.primary("next", ">").asDisabled()
     );
-    private int rowIndex = 0;
+    private int rowIndex;
     private ArrayList<ActionRow> rows = new ArrayList<>();
     /*private ActionRow row = ActionRow.of(
             StringSelectMenu.create("Options")
@@ -72,12 +72,23 @@ public class ChampCommandHandler extends ListenerAdapter {
         if (event.getName().equals("champ")) {
             event.deferReply().queue();
 
+            champion = new Champion();
+            passive = new Ability();
+            q = new Ability();
+            w = new Ability();
+            e = new Ability();
+            ult = new Ability();
+
+            embed = new EmbedBuilder();
+
             rows.add(profileRow);
             rows.add(pRow);
             rows.add(qRow);
             rows.add(wRow);
             rows.add(eRow);
             rows.add(ultRow);
+
+            rowIndex = 0;
 
             String input = event.getOption("name").getAsString();
             String normalizedName = Pattern.compile("\\b*(.)(.*?)\\b").matcher(input).replaceAll(
