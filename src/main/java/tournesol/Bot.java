@@ -13,8 +13,8 @@ import java.util.Collections;
 
 public class Bot {
     public static void main(String[] args) {
-        // Dotenv dotenv = Dotenv.load();
-        JDA jda = JDABuilder.createLight("NzYxNTg0NzMyNDMzMTU0MDc4.GKl6X3.9LjUE55FmgJb0n6qUEbFnnKAgM0poHIxoI8NlU", Collections.emptyList())
+        Dotenv dotenv = Dotenv.load();
+        JDA jda = JDABuilder.createLight(dotenv.get("BOT_TOKEN"), Collections.emptyList())
                 .setActivity(Activity.playing("with Ery"))
                 .build();
 
