@@ -3,9 +3,17 @@ package tournesol.models;
 public class Champion {
     private String name;
     private String subtitle;
-    private String positionUrl;
+    private String position;
     private String imageUrl;
-    private Ability passive;
+    private String description;
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
     public String getName() {
         return name;
@@ -23,12 +31,12 @@ public class Champion {
         this.subtitle = subtitle;
     }
 
-    public String getPositionUrl() {
-        return positionUrl;
+    public String getPosition() {
+        return position;
     }
 
-    public void setPositionUrl(String positionUrl) {
-        this.positionUrl = positionUrl;
+    public void setPosition(String position) {
+        this.position = position;
     }
 
     public String getImageUrl() {
@@ -39,11 +47,5 @@ public class Champion {
         this.imageUrl = imageUrl;
     }
 
-    public Ability getPassive() {
-        return passive;
-    }
 
-    public void setPassive(Ability passive) {
-        this.passive = passive;
-    }
 }

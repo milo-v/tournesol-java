@@ -3,23 +3,19 @@ package tournesol.commands;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
-import net.dv8tion.jda.api.utils.messages.MessageEditData;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import tournesol.models.Champion;
+import org.jsoup.select.Elements;
 import tournesol.models.Ability;
+import tournesol.models.Champion;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.regex.Pattern;
 
 public class ChampCommandHandler extends ListenerAdapter {
     private Champion champion;
@@ -29,47 +25,43 @@ public class ChampCommandHandler extends ListenerAdapter {
     private Ability e;
     private Ability ult;
     private EmbedBuilder embed;
-    private ActionRow profileRow = ActionRow.of(
+    private final ActionRow profileRow = ActionRow.of(
             Button.primary("prev", "<").asDisabled(),
             Button.primary("profile", "Profile").asDisabled(),
             Button.primary("next", ">")
     );
-    private ActionRow pRow = ActionRow.of(
+    private final ActionRow pRow = ActionRow.of(
             Button.primary("prev", "<"),
             Button.primary("p", "Passive").asDisabled(),
             Button.primary("next", ">")
     );
-    private ActionRow qRow = ActionRow.of(
+    private final ActionRow qRow = ActionRow.of(
             Button.primary("prev", "<"),
             Button.primary("q", "1st ability").asDisabled(),
             Button.primary("next", ">")
     );
-    private ActionRow wRow = ActionRow.of(
+    private final ActionRow wRow = ActionRow.of(
             Button.primary("prev", "<"),
             Button.primary("w", "2nd ability").asDisabled(),
             Button.primary("next", ">")
     );
-    private ActionRow eRow = ActionRow.of(
+    private final ActionRow eRow = ActionRow.of(
             Button.primary("prev", "<"),
             Button.primary("e", "3rd ability").asDisabled(),
             Button.primary("next", ">")
     );
-    private ActionRow ultRow = ActionRow.of(
+    private final ActionRow ultRow = ActionRow.of(
             Button.primary("prev", "<"),
             Button.primary("r", "Ultimate").asDisabled(),
             Button.primary("next", ">").asDisabled()
     );
     private int rowIndex;
-    private ArrayList<ActionRow> rows = new ArrayList<>();
-    /*private ActionRow row = ActionRow.of(
-            StringSelectMenu.create("Options")
-                    .addOption("Ultimate", "p")
-                    .addOption("Ultimate", "r")
-                    .build()
-    );*/
+    private final ArrayList<ActionRow> rows = new ArrayList<>();
+
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         if (event.getName().equals("champ")) {
+            System.out.println("champ command called");
             event.deferReply().queue();
 
             champion = new Champion();
@@ -91,146 +83,129 @@ public class ChampCommandHandler extends ListenerAdapter {
             rowIndex = 0;
 
             String input = event.getOption("name").getAsString();
-            String normalizedName = Pattern.compile("\\b*(.)(.*?)\\b").matcher(input).replaceAll(
-                    matchResult -> matchResult.group(1).toUpperCase() + matchResult.group(2).toLowerCase()
-            ).replaceAll(" ", "_");
-            String urlWR = "https://leagueoflegends.fandom.com/wiki/" + normalizedName + "/WR";
-            String urlLoL = "https://leagueoflegends.fandom.com/wiki/" + normalizedName + "/LoL";
+            String normalizedName = input.toLowerCase().replaceAll(" & ", "-").replaceAll("'", "-").replaceAll(" ", "-").replaceAll("\\.", "");
 
+            String homepage = "https://wr-meta.com/";
 
-            Connection wrConnection = Jsoup.connect(urlWR);
-            Connection lolConnection = Jsoup.connect(urlLoL);
-            Document wrDocument;
-            Document lolDocument;
+            Connection c1 = Jsoup.connect(homepage);
+            Document d1;
             try {
-                wrDocument = wrConnection.get();
-                lolDocument = lolConnection.get();
+                d1 = c1.get();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
 
+            Elements listChamps = d1.selectXpath("/html/body/div[2]/div[2]/div/div[1]/div/main/div/div/div[2]/div[2]/div/div[position() > 0]");
+
+            String champUrl = "";
+            for (Element champ : listChamps) {
+                if (champ.getElementsByTag("a").attr("href").contains(normalizedName)) {
+                    champUrl += champ.getElementsByTag("a").attr("href");
+                }
+            }
+
+            Connection c2 = Jsoup.connect(champUrl);
+            Connection c3 = Jsoup.connect("https://wildrift.leagueoflegends.com/en-us/champions/" + normalizedName + "/");
+            Document d2;
+            Document d3;
+            try {
+                d2 = c2.get();
+                d3 = c3.get();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            d2 = Jsoup.parse(d2.toString().replaceAll("<img alt=\"perlevel\" class=\"emoji\" src=\"/engine/data/emoticons/perlevel.png\">", "increased per level").replaceAll("<img alt=\"attackdamage\" class=\"emoji\" src=\"/engine/data/emoticons/attackdamage.png\">", "AD").replaceAll("<img alt=\"abilitypower\" class=\"emoji\" src=\"/engine/data/emoticons/abilitypower.png\">", "AP").replaceAll("<img alt=\"criticalstrike\" class=\"emoji\" src=\"/engine/data/emoticons/criticalstrike.png\">", "Critical Rate").replaceAll("<img style=\"position:relative;top:2px;\" src=\"/templates/wrw-v2/images/icon-stat/cdr.png\">", "Cooldown(reduction) ").replaceAll("<img style=\"position:relative;top:2px;\" src=\"/templates/wrw-v2/images/icon-stat/Mana.png\">", "Mana ").replaceAll("<img style=\"position:relative;top:2px;\" src=\"/templates/wrw-v2/images/icon-stat/energy.png\">", "Energy ").replaceAll("<img alt=\"cooldownreduction\" class=\"emoji\" src=\"/engine/data/emoticons/cooldownreduction.png\">", "Cooldown(reduction) ").replaceAll("<img alt=\"mana\" class=\"emoji\" src=\"/engine/data/emoticons/mana.png\">", "Mana "));
+
+
+
             // get champion's basic info
-            Element imgElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[3]/div[1]/div[2]/a").first();
-            Element nameElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[3]/div[2]/span").first();
-            Element subtitleElem = lolDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[6]/aside/div[1]/div/span").first();
-            Element positionElem = lolDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[6]/aside/div[6]/div/span/a[1]/img").first();
+            champion.setName(d2.selectXpath("/html/head/meta[7]").attr("content"));
+            champion.setSubtitle(d3.selectXpath("/html/body/div[1]/div[1]/div/main/section[1]/div[2]/div/div/div[1]/p").text());
+            champion.setImageUrl(d2.selectXpath("/html/head/meta[9]").attr("content"));
+            champion.setDescription(d2.selectXpath("/html/head/meta[10]").attr("content") + "...");
 
-            String positionUrl = positionElem.attr("data-src");
-            positionUrl = positionUrl.substring(0, positionUrl.indexOf(".png") + 4);
+            // get champion's passive
+            passive.setName(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(1).child(0).child(0).getElementsByTag("p").first().getElementsByTag("i").first().text());
+            passive.setDescription(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(1).child(0).child(0).getElementsByTag("p").first().wholeText().replace(passive.getName(), "").replace("Open video", ""));
+            passive.setThumbnailUrl("https://wr-meta.com" + d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(1).child(0).child(0).getElementsByTag("span").first().getElementsByTag("img").first().attr("data-src"));
 
-            this.champion.setName(nameElem.text());
-            this.champion.setSubtitle(subtitleElem.text());
-            this.champion.setPositionUrl(positionUrl);
-            this.champion.setImageUrl(imgElem.attr("href"));
+            // get champion's q
+            q.setName(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(2).child(0).child(0).getElementsByTag("p").first().getElementsByTag("i").first().text());
+            q.setDescription(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(2).child(0).child(0).getElementsByTag("p").first().wholeText().replace(q.getName(), "").replace("Open video", ""));
+            q.setThumbnailUrl("https://wr-meta.com" + d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(2).child(0).child(0).getElementsByTag("span").first().getElementsByTag("img").first().attr("data-src"));
 
-            this.embed.setTitle(champion.getName());
-            this.embed.setDescription(champion.getSubtitle());
-            this.embed.setFooter("Press the buttons to view abilities");
+            // get champion's w
+            w.setName(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(3).child(0).child(0).getElementsByTag("p").first().getElementsByTag("i").first().text());
+            w.setDescription(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(3).child(0).child(0).getElementsByTag("p").first().wholeText().replace(w.getName(), "").replace("Open video", ""));
+            w.setThumbnailUrl("https://wr-meta.com" + d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(3).child(0).child(0).getElementsByTag("span").first().getElementsByTag("img").first().attr("data-src"));
 
-            // get champion's passive ability
-            Element pNameElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[7]/div/div/div[1]/h3").first();
-            Element pDescriptionElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[7]/div/div/div[2]/div[2]/div/p").first();
-            Element pImageElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[7]/div/div/div[2]/div[1]/div/img").first();
+            // get champion's e
+            e.setName(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(4).child(0).child(0).getElementsByTag("p").first().getElementsByTag("i").first().text());
+            e.setDescription(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(4).child(0).child(0).getElementsByTag("p").first().wholeText().replace(e.getName(), "").replace("Open video", ""));
+            e.setThumbnailUrl("https://wr-meta.com" + d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(4).child(0).child(0).getElementsByTag("span").first().getElementsByTag("img").first().attr("data-src"));
 
-            String pImageUrl = pImageElem.attr("data-src");
-            pImageUrl = pImageUrl.substring(0, pImageUrl.indexOf(".png") + 4);
+            // get champion's ult
+            ult.setName(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(5).child(0).child(0).getElementsByTag("p").first().getElementsByTag("i").first().text());
+            ult.setDescription(d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(5).child(0).child(0).getElementsByTag("p").first().wholeText().replace(ult.getName(), "").replace("Open video", ""));
+            ult.setThumbnailUrl("https://wr-meta.com" + d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article").first().getElementsByClass("sect-bg3").first().children().first().child(1).child(5).child(0).child(0).getElementsByTag("span").first().getElementsByTag("img").first().attr("data-src"));
 
-            this.passive.setName(pNameElem.text());
-            this.passive.setDescription(pDescriptionElem.text());
-            this.passive.setThumbnailUrl(pImageUrl);
+            Elements positions = d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article/div/div[1]/div/div[1]").first().getElementsByClass("line-back-s");
+            Elements positions2 = d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article/div/div[1]/div/div[1]").first().getElementsByClass("line-back");
+            Elements positions3 = d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article/div/div[1]/div/div[1]").first().getElementsByClass("line-back-a");
+            Elements positions4 = d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article/div/div[1]/div/div[1]").first().getElementsByClass("line-back-b");
+            Elements positions5 = d2.selectXpath("/html/body/div[2]/div[1]/div/div/div/article/div/div[1]/div/div[1]").first().getElementsByClass("line-back-c");
+            String pos = "";
+            for (Element position : positions) {
+                if (!pos.equals("")) {
+                    pos += ", ";
+                }
+                pos += position.child(0).attr("title");
+            }
+            for (Element position : positions2) {
+                if (!pos.equals("")) {
+                    pos += ", ";
+                }
+                pos += position.child(0).attr("title");
+            }
+            for (Element position : positions3) {
+                if (!pos.equals("")) {
+                    pos += ", ";
+                }
+                pos += position.child(0).attr("title");
+            }
+            for (Element position : positions4) {
+                if (!pos.equals("")) {
+                    pos += ", ";
+                }
+                pos += position.child(0).attr("title");
+            }
+            for (Element position : positions5) {
+                if (!pos.equals("")) {
+                    pos += ", ";
+                }
+                pos += position.child(0).attr("title");
+            }
 
-            System.out.println(passive.getName());
+            champion.setPosition(pos);
 
-            // get champion's 1st ability
-            Element qNameElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[10]/div/div/div[1]/h3").first();
-            Element qDescriptionElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[10]/div/div/div[2]").first();
-            Element qImageElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[10]/div/div/div[2]/div[1]/div/img").first();
+            embed.setTitle(champion.getName());
+            embed.setDescription(champion.getSubtitle());
 
-            String qImageUrl = qImageElem.attr("data-src");
-            qImageUrl = qImageUrl.substring(0, qImageUrl.indexOf(".png") + 4);
+            EmbedBuilder champEmbed = new EmbedBuilder(embed);
 
-            this.q.setName(qNameElem.text());
-            this.q.setDescription(qDescriptionElem.text());
-            this.q.setThumbnailUrl(qImageUrl);
-
-            System.out.println(q.getName());
-
-            // get champion's 2nd ability
-            Element wNameElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[13]/div/div/div[1]/h3").first();
-            Element wDescriptionElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[13]/div/div/div[2]").first();
-            Element wImageElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[13]/div/div/div[2]/div[1]/div/img").first();
-
-            String wImageUrl = wImageElem.attr("data-src");
-            wImageUrl = wImageUrl.substring(0, wImageUrl.indexOf(".png") + 4);
-
-            this.w.setName(wNameElem.text());
-            this.w.setDescription(wDescriptionElem.text());
-            this.w.setThumbnailUrl(wImageUrl);
-
-            System.out.println(w.getName());
-
-            // get champion's 3rd ability
-            Element eNameElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[16]/div/div/div[1]/h3").first();
-            Element eDescriptionElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[16]/div/div/div[2]").first();
-            Element eImageElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[16]/div/div/div[2]/div[1]/div/img").first();
-
-            String eImageUrl = eImageElem.attr("data-src");
-            eImageUrl = eImageUrl.substring(0, eImageUrl.indexOf(".png") + 4);
-
-            this.e.setName(eNameElem.text());
-            this.e.setDescription(eDescriptionElem.text());
-            this.e.setThumbnailUrl(eImageUrl);
-
-            System.out.println(e.getName());
-
-            // get champion's ultimate
-            Element rNameElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[19]/div/div/div[1]/h3").first();
-            Element rDescriptionElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[19]/div/div/div[2]").first();
-            Element rImageElem = wrDocument.selectXpath("/html/body/div[4]/div[3]/div[2]/main/div[3]/div[2]/div[1]/div[19]/div/div/div[2]/div[1]/div/img").first();
-
-            String rImageUrl = rImageElem.attr("data-src");
-            rImageUrl = rImageUrl.substring(0, rImageUrl.indexOf(".png") + 4);
-
-            ult.setName(rNameElem.text());
-            ult.setDescription(rDescriptionElem.text());
-            ult.setThumbnailUrl(rImageUrl);
-
-            System.out.println(ult.getName());
-
-            EmbedBuilder champEmbed = new EmbedBuilder(this.embed);
-
-            champEmbed.setThumbnail(champion.getPositionUrl());
             champEmbed.setImage(champion.getImageUrl());
+            champEmbed.addField("", champion.getDescription(), false);
+            champEmbed.addField("", champion.getName() + " can be played " + champion.getPosition() + ".", false);
 
-            event.getHook().editOriginal(MessageEditData.fromEmbeds(champEmbed.build())).queue();
-            event.getHook().editOriginalComponents(profileRow).queue();
+            event.getHook().editOriginalEmbeds(champEmbed.build()).queue();
+            event.getHook().editOriginalComponents(rows.get(rowIndex)).queue();
         }
     }
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
-        System.out.println("Button " + event.getComponentId() + " pressed by " + event.getUser().getName());
         switch (event.getComponentId()) {
-            /*case "p":
-                EmbedBuilder pEmbed = new EmbedBuilder(this.embed);
-                pEmbed.addField("Passive: " + this.passive.getName(), this.passive.getDescription(), false);
-                pEmbed.setThumbnail(passive.getThumbnailUrl());
-                event.getMessage().editMessageEmbeds(pEmbed.build()).queue();
-                event.deferEdit().queue();
-
-                break;
-
-            case "q":
-                EmbedBuilder qEmbed = new EmbedBuilder(this.embed);
-
-            case "r":
-                EmbedBuilder rEmbed = new EmbedBuilder(this.embed);
-                rEmbed.addField("Ultimate: " + this.ult.getName(), this.ult.getDescription(), false);
-                rEmbed.setThumbnail(ult.getThumbnailUrl());
-                event.getMessage().editMessageEmbeds(rEmbed.build()).queue();
-                event.deferEdit().queue();
-
-                break;*/
             case "next":
                 rowIndex++;
                 break;
@@ -248,12 +223,14 @@ public class ChampCommandHandler extends ListenerAdapter {
         EmbedBuilder embedBuilder = new EmbedBuilder(embed);
         switch (rowIndex) {
             case 0:
-                embedBuilder.setThumbnail(champion.getPositionUrl());
+                embedBuilder.addField("", champion.getDescription(), false);
+                embedBuilder.addField("", champion.getName() + " can be played " + champion.getPosition() + ".", false);
                 embedBuilder.setImage(champion.getImageUrl());
                 break;
 
             case 1:
-                embedBuilder.addField("Passive: " + passive.getName(), passive.getDescription(), false);
+                System.out.println(this.passive.getName());
+                embedBuilder.addField(passive.getName(), passive.getDescription() + "", false);
                 embedBuilder.setThumbnail(passive.getThumbnailUrl());
                 break;
 
@@ -273,32 +250,10 @@ public class ChampCommandHandler extends ListenerAdapter {
                 break;
 
             case 5:
-                embedBuilder.addField("Ultimate: " + ult.getName(), ult.getDescription(), false);
+                embedBuilder.addField(ult.getName(), ult.getDescription(), false);
                 embedBuilder.setThumbnail(ult.getThumbnailUrl());
                 break;
         }
         return embedBuilder;
     }
-
-    /*@Override
-    public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        System.out.println("String select interaction");
-        switch (event.getValues().get(0)) {
-            case "p":
-                EmbedBuilder pEmbed = new EmbedBuilder(this.embed);
-                pEmbed.addField("Passive: " + this.passive.getName(), this.passive.getDescription(), false);
-                pEmbed.setThumbnail(passive.getThumbnailUrl());
-                event.getMessage().editMessageEmbeds(pEmbed.build()).queue();
-                event.deferEdit().queue();
-                break;
-
-            case "r":
-                EmbedBuilder rEmbed = new EmbedBuilder(this.embed);
-                rEmbed.addField("Ultimate: " + this.ult.getName(), this.ult.getDescription(), false);
-                rEmbed.setThumbnail(ult.getThumbnailUrl());
-                event.getMessage().editMessageEmbeds(rEmbed.build()).queue();
-                event.deferEdit().queue();
-                break;
-        }
-    }*/
 }
